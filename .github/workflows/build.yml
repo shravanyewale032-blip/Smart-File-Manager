@@ -26,7 +26,7 @@ jobs:
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
           echo "sdk.dir=$ANDROID_HOME" > local.properties
 
-      - name: Create Complete Android Project Source
+      - name: Create Clean Android Project
         run: |
           rm -rf app settings.gradle.kts build.gradle.kts
 
@@ -40,7 +40,7 @@ jobs:
               }
           }
           dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
               repositories {
                   google()
                   mavenCentral()
@@ -52,25 +52,13 @@ jobs:
 
           # 2. Create Root build.gradle.kts
           cat << 'EOF' > build.gradle.kts
-          buildscript {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-              dependencies {
-                  classpath("com.android.tools.build:gradle:8.1.4")
-                  classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.20")
-              }
-          }
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
+          plugins {
+              id("com.android.application") version "8.1.4" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.20" apply false
           }
           EOF
 
-          # 3. Create app directory and app/build.gradle.kts
+          # 3. Create App Directory & app/build.gradle.kts
           mkdir -p app/src/main/java/com/smartfilemanager/pro
 
           cat << 'EOF' > app/build.gradle.kts
@@ -107,7 +95,7 @@ jobs:
           }
           EOF
 
-          # 4. Create Manifest File
+          # 4. Create AndroidManifest.xml
           cat << 'EOF' > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -132,7 +120,7 @@ jobs:
           </manifest>
           EOF
 
-          # 5. Create MainActivity.kt with File Manager UI
+          # 5. Create MainActivity.kt
           cat << 'EOF' > app/src/main/java/com/smartfilemanager/pro/MainActivity.kt
           package com.smartfilemanager.pro
 
