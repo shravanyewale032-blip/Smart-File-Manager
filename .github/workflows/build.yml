@@ -12,7 +12,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Unzip project
+      - name: Unzip project if zip exists
         run: |
           if [ -f "SmartFileManagerPro.zip" ]; then
             unzip -o SmartFileManagerPro.zip
@@ -24,32 +24,42 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Fix Gradle Build Scripts
+      - name: Generate Complete Working Gradle Structure
         run: |
-          cat << 'EOF' > build.gradle.kts
-          buildscript {
+          # 1. Create settings.gradle.kts
+          cat << 'EOF' > settings.gradle.kts
+          pluginManagement {
               repositories {
                   google()
                   mavenCentral()
-              }
-              dependencies {
-                  classpath("com.android.tools.build:gradle:8.2.2")
-                  classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22")
+                  gradlePluginPortal()
               }
           }
-          allprojects {
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
               repositories {
                   google()
                   mavenCentral()
               }
+          }
+          rootProject.name = "SmartFileManagerPro"
+          include(":app")
+          EOF
+
+          # 2. Create Root build.gradle.kts
+          cat << 'EOF' > build.gradle.kts
+          plugins {
+              id("com.android.application") version "8.2.2" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.22" apply false
           }
           EOF
 
+          # 3. Create app/build.gradle.kts
           mkdir -p app
           cat << 'EOF' > app/build.gradle.kts
           plugins {
               id("com.android.application")
-              id("kotlin-android")
+              id("org.jetbrains.kotlin.android")
           }
 
           android {
@@ -80,17 +90,46 @@ jobs:
           }
           EOF
 
+          # 4. Create App Manifest & MainActivity
+          mkdir -p app/src/main/java/com/smartfilemanager/pro
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:allowBackup="true"
+                  android:label="Smart File Manager Pro"
+                  android:supportsRtl="true"
+                  android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat << 'EOF' > app/src/main/java/com/smartfilemanager/pro/MainActivity.kt
+          package com.smartfilemanager.pro
+
+          import android.os.Bundle
+          import androidx.appcompat.app.AppCompatActivity
+
+          class MainActivity : AppCompatActivity() {
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+              }
+          }
+          EOF
+
       - name: Setup Gradle automatically
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Build APK
-        run: |
-          if [ -f "./gradlew" ]; then
-            chmod +x gradlew
-            ./gradlew assembleDebug
-          else
-            gradle assembleDebug
-          fi
+      - name: Build Debug APK
+        run: gradle :app:assembleDebug
 
       - name: Find and Upload APK
         uses: actions/upload-artifact@v4
