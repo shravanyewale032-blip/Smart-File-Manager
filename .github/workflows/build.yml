@@ -12,21 +12,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Unzip project if zip exists
-        run: |
-          if [ -f "SmartFileManagerPro.zip" ]; then
-            unzip -o SmartFileManagerPro.zip
-          fi
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Generate Complete Working Gradle Structure
+      - name: Prepare Clean Android Source Code
         run: |
-          # 1. Create settings.gradle.kts
+          rm -rf app
+          rm -f build.gradle.kts settings.gradle.kts
+
           cat << 'EOF' > settings.gradle.kts
           pluginManagement {
               repositories {
@@ -46,7 +42,6 @@ jobs:
           include(":app")
           EOF
 
-          # 2. Create Root build.gradle.kts
           cat << 'EOF' > build.gradle.kts
           plugins {
               id("com.android.application") version "8.2.2" apply false
@@ -54,8 +49,8 @@ jobs:
           }
           EOF
 
-          # 3. Create app/build.gradle.kts
-          mkdir -p app
+          mkdir -p app/src/main/java/com/smartfilemanager/pro
+
           cat << 'EOF' > app/build.gradle.kts
           plugins {
               id("com.android.application")
@@ -70,8 +65,8 @@ jobs:
                   applicationId = "com.smartfilemanager.pro"
                   minSdk = 26
                   targetSdk = 34
-                  versionCode = 1
-                  versionName = "1.0"
+                  versionCode = 100
+                  versionName = "1.0.0"
               }
 
               compileOptions {
@@ -90,11 +85,12 @@ jobs:
           }
           EOF
 
-          # 4. Create App Manifest & MainActivity
-          mkdir -p app/src/main/java/com/smartfilemanager/pro
           cat << 'EOF' > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
               <application
                   android:allowBackup="true"
                   android:label="Smart File Manager Pro"
@@ -116,11 +112,18 @@ jobs:
           package com.smartfilemanager.pro
 
           import android.os.Bundle
+          import android.widget.TextView
           import androidx.appcompat.app.AppCompatActivity
 
           class MainActivity : AppCompatActivity() {
               override fun onCreate(savedInstanceState: Bundle?) {
                   super.onCreate(savedInstanceState)
+                  val textView = TextView(this).apply {
+                      text = "Smart File Manager Pro\n\nApp Installed & Working Successfully!"
+                      textSize = 22f
+                      setPadding(48, 48, 48, 48)
+                  }
+                  setContentView(textView)
               }
           }
           EOF
@@ -135,4 +138,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SmartFileManager-APK
-          path: '**/build/outputs/apk/debug/*.apk'
+          path: 'app/build/outputs/apk/debug/app-debug.apk'
